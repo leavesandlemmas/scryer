@@ -7,7 +7,11 @@ Created on Thu Feb 17 15:16:57 2022
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
+
+
+
 # DERIVATIVE APPROXIMATES
+
 def forward_diff(y,t):
     out =np.empty_like(y)
     out[...,:-1] = (y[...,1:] - y[...,:-1])/(t[1:] - t[:-1])
@@ -38,11 +42,11 @@ def diff(y,t,n=1):
 
 
 # SMOOTHING
+
 w = signal.boxcar(30)
 w /= w.sum()
 def moving_average(y):
     return signal.convolve(y,w,mode='same')
-
 
 def lowpass(y, n = 365//2):
     z = np.fft.rfft(y)
@@ -67,7 +71,6 @@ def delay(x,shift=1):
     for i in range(shift+1):
         out[i] = x[i:N - shift + i]
     return out
-
 
 def derivative_embeding(x,t,n=1):
     N = x.shape[0]
@@ -114,7 +117,9 @@ def cyl_embed(y,t, n = 10):
     return y_trend, y_seasonal
 
 
+
 # POINCARE MAPS
+
 # def nullcline_pmap(x,t):
 #     dxdt = center_diff(x,t)
 #     ind = []
@@ -155,7 +160,6 @@ def cross(x, a=0, direction=0):
         return np.where((s[1:]*s[:-1] < 0)  & (grad < 0))
     else:
         return np.where((s[1:]*s[:-1] < 0)  & (grad > 0))
-
 
 
 
