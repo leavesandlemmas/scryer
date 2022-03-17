@@ -7,7 +7,7 @@ Created on Thu Feb 17 15:16:57 2022
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
-
+from scipy.interpolate import interp1d
 
 
 # DERIVATIVE APPROXIMATES
@@ -57,7 +57,12 @@ def smooth(x,t,n=24):
     y = lowpass(x)
     return signal.resample(y,num=y.shape[0]*n,t=t)
 
-
+def resonant_filter(y, freq = 25, harmonic=10):
+    yf = np.fft.rfft(y)
+    zf = np.zeros_like(yf)
+    zf[::freq][:harmonic] = yf[::freq][:harmonic]
+    out = np.fft.irfft(zf)
+    return out
 
 # PHASE SPACE EMBEDDINGS
 
@@ -161,8 +166,35 @@ def cross(x, a=0, direction=0):
     else:
         return np.where((s[1:]*s[:-1] < 0)  & (grad > 0))
 
+def envelope(x,t=None,xdot=None, bounds=True):
+    if xdot is None:
+        if t is None:
+            t = np.arange(x.shape[0])
+        xdot = diff(x,t)
+    maxima = cross(xdot,0,-1)
+    minima = cross(xdot,0, 1)
+    upr = interp1d(t[maxima], x[maxima], kind = 'quadratic')
+    lwr = interp1d(t[minima], x[minima], kind = 'quadratic')
+    if bounds:
+        tmax = t[maxima]
+        tmin = t[minima]
+        bnd = [max(tmin.min(), tmax.min()), min(tmin.max(),tmax.max())]
+        return lwr, upr, bnd
+    else:
+        return lwr, upr
 
-
+def normalize_by_envelope(x, t=None, xdot=None, return_indices=True):
+    if t is None:
+        t = np.arange(x.shape[0])
+    lwr, upr, bnd = envelope(x, t, xdot)
+    valid = (t >= bnd[0]) & (t <= bnd[1])
+    l = lwr(t[valid])
+    u = upr(t[valid])
+    y = (x[valid]-l)/(u-l)
+    out = t[valid], y
+    if return_indices:
+        out += (valid,)
+    return out 
 # PLOTTING FUNCTIONS
 
 def pair(*args,**kwargs):
@@ -198,3 +230,16 @@ def svd_biplot(*args, ax=None, **kwargs):
         ax.plot(y[0],y[1])
         return y
     
+def derivplot(y,t,n=4,fac=False):
+    fig, ax = plt.subplots(1,n)
+    x = y.copy()
+    xdot = diff(x,t)
+    m = 2
+    for i in range(n):
+        ax[i].plot(x,xdot)
+        x,xdot = xdot, diff(xdot,t)
+        if fac:
+            xdot /= m
+            m *= (i + 3)
+        print(m)
+    return fig, ax
